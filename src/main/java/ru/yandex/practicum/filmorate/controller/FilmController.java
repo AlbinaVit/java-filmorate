@@ -22,9 +22,11 @@ public class FilmController {
 
     private static final Logger log = LoggerFactory.getLogger(FilmController.class);
     private final List<Film> films = new ArrayList<>();
+    private int currentId = 1;
 
     @PostMapping
     public Film addFilm(@Valid @RequestBody Film film) {
+        film.setId(currentId++);
         films.add(film);
         log.info("Добавлен фильм: {}", film);
         return film;
