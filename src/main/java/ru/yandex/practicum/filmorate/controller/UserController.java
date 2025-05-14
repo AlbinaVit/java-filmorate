@@ -49,7 +49,7 @@ public class UserController {
         if (users.isEmpty()) {
             log.debug("Список пользователей пуст");
         } else {
-            log.info("Список всех пользователей {}", users    );
+            log.info("Список всех пользователей {}", users);
         }
         return new ArrayList<>(users.values());
     }
