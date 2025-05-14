@@ -13,36 +13,34 @@ import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/films")
 public class FilmController {
 
     private static final Logger log = LoggerFactory.getLogger(FilmController.class);
-    private final List<Film> films = new ArrayList<>();
+    private final Map<Long, Film> films = new HashMap<>();
     private int currentId = 1;
 
     @PostMapping
     public Film addFilm(@Valid @RequestBody Film film) {
         film.setId(currentId++);
-        films.add(film);
+        films.put(film.getId(), film);
         log.info("Добавлен фильм: {}", film);
         return film;
     }
 
     @PutMapping
     public Film updateFilm(@Valid @RequestBody Film film) {
-        Optional<Film> existingFilmOpt = films.stream()
-                .filter(f -> f.getId() == film.getId())
-                .findFirst();
-
-        if (existingFilmOpt.isEmpty()) {
-            throw new ValidationException("Фильм не найден");
+        if (!films.containsKey(film.getId())) {
+            throw new ValidationException(String.format("Фильм с id = %d не найден", film.getId()));
         }
 
-        Film existingFilm = existingFilmOpt.get();
+        Film existingFilm = films.get(film.getId());
+
         existingFilm.setName(film.getName());
         existingFilm.setDescription(film.getDescription());
         existingFilm.setReleaseDate(film.getReleaseDate());
@@ -54,7 +52,13 @@ public class FilmController {
 
     @GetMapping
     public List<Film> getAllFilms() {
-        return films;
+        if (films.isEmpty()) {
+            log.debug("Список фильмов пуст");
+        } else {
+            log.info("Список всех фильмов {}", films);
+        }
+        return new ArrayList<>(films.values());
+
     }
 
 }

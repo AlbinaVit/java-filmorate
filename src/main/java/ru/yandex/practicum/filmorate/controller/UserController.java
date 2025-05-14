@@ -27,9 +27,7 @@ public class UserController {
     @PostMapping
     public User createUser(@Valid @RequestBody User user) {
         user.setId(currentId++);
-        if (user.getName() == null || user.getName().isEmpty()) {
-            user.setName(user.getLogin());
-        }
+        setDefaultNameIfEmpty(user);
         users.put(user.getId(), user);
         log.info("Создан пользователь: {}", user);
         return user;
@@ -38,11 +36,9 @@ public class UserController {
     @PutMapping
     public User updateUser(@Valid @RequestBody User user) {
         if (!users.containsKey(user.getId())) {
-            throw new ValidationException("Пользователь не найден");
+            throw new ValidationException(String.format("Пользователь с id  = %d не найден", user.getId()));
         }
-        if (user.getName() == null || user.getName().isEmpty()) {
-            user.setName(user.getLogin());
-        }
+        setDefaultNameIfEmpty(user);
         users.put(user.getId(), user);
         log.info("Обновлен пользователь: {}", user);
         return user;
@@ -50,7 +46,18 @@ public class UserController {
 
     @GetMapping
     public List<User> getAllUsers() {
+        if (users.isEmpty()) {
+            log.debug("Список пользователей пуст");
+        } else {
+            log.info("Список всех пользователей {}", users    );
+        }
         return new ArrayList<>(users.values());
+    }
+
+    private void setDefaultNameIfEmpty(User user) {
+        if (user.getName() == null || user.getName().isEmpty()) {
+            user.setName(user.getLogin());
+        }
     }
 
 }
