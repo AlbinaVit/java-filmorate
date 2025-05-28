@@ -5,13 +5,18 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.FilmService;
+import ru.yandex.practicum.filmorate.service.UserService;
 
 import java.time.LocalDate;
 
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -22,6 +27,12 @@ public class ValidationModelsTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockBean
+    private FilmService filmService;
+
+    @MockBean
+    private UserService userService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -43,6 +54,8 @@ public class ValidationModelsTest {
 
     @Test
     void addValidFilm_ShouldReturnOk() throws Exception {
+        when(filmService.addFilm(validFilm)).thenReturn(validFilm);
+
         mockMvc.perform(post("/films")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validFilm)))
@@ -67,6 +80,8 @@ public class ValidationModelsTest {
         filmToUpdate.setReleaseDate(LocalDate.of(2000, 1, 1));
         filmToUpdate.setDuration(100);
 
+        when(filmService.updateFilm(filmToUpdate)).thenThrow(new ValidationException("Фильм не найден"));
+
         mockMvc.perform(put("/films")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(filmToUpdate)))
@@ -75,6 +90,8 @@ public class ValidationModelsTest {
 
     @Test
     void createValidUser_ShouldReturnOk() throws Exception {
+        when(userService.addUser(validUser)).thenReturn(validUser);
+
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validUser)))
@@ -101,6 +118,8 @@ public class ValidationModelsTest {
         nonExistentUser.setLogin("login");
         nonExistentUser.setName("Name");
         nonExistentUser.setBirthday(LocalDate.of(1946, 1, 1));
+
+        when(userService.updateUser(nonExistentUser)).thenThrow(new ValidationException("Пользователь не найден"));
 
         mockMvc.perform(put("/users")
                         .contentType(MediaType.APPLICATION_JSON)
