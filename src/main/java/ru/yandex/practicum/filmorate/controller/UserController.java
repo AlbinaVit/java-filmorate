@@ -2,6 +2,8 @@ package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -20,11 +22,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/users")
 public class UserController {
-    private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
 
@@ -63,25 +65,16 @@ public class UserController {
 
     @GetMapping("/{id}/friends")
     public ResponseEntity<List<User>> getFriends(@PathVariable long id) {
-        Set<Long> friendIds = userService.getFriends(id);
-        List<User> friends = friendIds.stream()
-                .map(userService::getUserById)
-                .collect(Collectors.toList());
-        log.info("Список друзей пользователя {}: {}", id, friends);
+        List<User> friends = userService.getFriends(id);
+        log.info("Список друзей пользователя {} получен", id);
         return ResponseEntity.ok(friends);
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")
-    public ResponseEntity<List<User>> getCommonFriends(@PathVariable long id, @PathVariable long otherId) {
-        Set<Long> commonFriendIds = userService.getCommonFriends(id, otherId);
-
-        List<User> commonFriends = commonFriendIds.stream()
-                .map(userService::getUserById)
-                .collect(Collectors.toList());
-
-        log.info("Общие друзья между {} и {}: {}", id, otherId, commonFriends);
-
-        return ResponseEntity.ok(commonFriends);
+    public ResponseEntity<List<User>> getCommonFriends(
+            @PathVariable long id,
+            @PathVariable long otherId) {
+        return ResponseEntity.ok(userService.getCommonFriends(id, otherId));
     }
 
 }
