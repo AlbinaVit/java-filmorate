@@ -15,4 +15,6 @@ public interface FilmStorage {
     List<Film> getAllFilms();
 
     List<Film> getPopularFilms(int count);
+
+    void addLike(long filmId, long userId);
 }
