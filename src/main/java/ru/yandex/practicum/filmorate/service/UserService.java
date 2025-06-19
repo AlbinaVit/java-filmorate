@@ -8,8 +8,6 @@ import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -51,36 +49,26 @@ public class UserService {
     public void addFriend(long userId, long friendId) {
         getUserById(userId);
         getUserById(friendId);
-
         userStorage.addFriend(userId, friendId);
     }
 
     public void removeFriend(long userId, long friendId) {
-        User user = getUserById(userId);
-        User friend = getUserById(friendId);
-
-        if (friend == null || user == null) {
-            throw new NotFoundException("Один из указанных пользователей не существует.");
-        }
-
+        getUserById(userId);
+        getUserById(friendId);
         userStorage.removeFriend(userId, friendId);
         log.info("Пользователь {} удалил из друзей пользователя {}", userId, friendId);
     }
 
     public List<User> getFriends(long userId) {
-        User user = getUserById(userId);
-        if (user == null) {
-            throw new NotFoundException("Один из указанных пользователей не существует.");
-        }
-        Set<Long> friendIds = userStorage.getFriends(userId);
-        List<User> friends = friendIds.stream()
-                .map(this::getUserById)
-                .collect(Collectors.toList());
+        getUserById(userId);
+        List<User> friends = userStorage.getFriendsWithDetails(userId);
         log.info("Список друзей пользователя {}: {}", userId, friends);
         return friends;
     }
 
     public List<User> getCommonFriends(long userId, long otherId) {
+        getUserById(userId);
+        getUserById(otherId);
         return userStorage.getCommonFriends(userId, otherId);
     }
 

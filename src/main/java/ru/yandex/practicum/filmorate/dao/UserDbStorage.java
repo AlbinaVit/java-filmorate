@@ -18,7 +18,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Repository
@@ -107,22 +106,27 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public List<User> getCommonFriends(long userId, long otherId) {
-        String sql = "SELECT f1.friend_id FROM friends f1 " +
-                "INNER JOIN friends f2 ON f1.friend_id = f2.friend_id " +
+        String sql = "SELECT u.id, u.email, u.login, u.name, u.birthday " +
+                "FROM users u " +
+                "INNER JOIN friends f1 ON u.id = f1.friend_id " +
+                "INNER JOIN friends f2 ON u.id = f2.friend_id " +
                 "WHERE f1.user_id = ? AND f2.user_id = ?";
-        List<Long> commonFriendIds = jdbcTemplate.queryForList(sql, Long.class, userId, otherId);
-
-        return commonFriendIds.stream()
-                .map(this::getUserById)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .collect(Collectors.toList());
+        return jdbcTemplate.query(sql, userRowMapper, userId, otherId);
     }
 
     private boolean isFriendExists(long userId, long friendId) {
         String sql = "SELECT COUNT(*) FROM friends WHERE user_id = ? AND friend_id = ?";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, userId, friendId);
         return count != null && count > 0;
+    }
+
+    @Override
+    public List<User> getFriendsWithDetails(long userId) {
+        String sql = "SELECT u.id, u.email, u.login, u.name, u.birthday " +
+                "FROM users u " +
+                "JOIN friends f ON u.id = f.friend_id " +
+                "WHERE f.user_id = ?";
+        return jdbcTemplate.query(sql, userRowMapper, userId);
     }
 
 }

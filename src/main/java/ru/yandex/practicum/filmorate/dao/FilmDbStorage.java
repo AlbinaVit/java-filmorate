@@ -9,6 +9,8 @@ import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.MpaRating;
+import ru.yandex.practicum.filmorate.service.MpaService;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.sql.Connection;
@@ -27,7 +29,7 @@ public class FilmDbStorage implements FilmStorage {
 
     private final JdbcTemplate jdbcTemplate;
 
-    private final MpaDao mpaDao;
+    private final MpaService mpaService;
 
     @Override
     public Film addFilm(Film film) {
@@ -76,7 +78,7 @@ public class FilmDbStorage implements FilmStorage {
             film.setDuration(rs.getInt("duration"));
             film.setLikedUsers(getLikesByFilmId(film.getId()));
             film.setGenres(getGenresByFilmId(film.getId()));
-            film.setMpa(mpaDao.getMpaById(rs.getInt("mpa_rating_id")));
+            film.setMpa(mpaService.getMpaById(rs.getInt("mpa_rating_id")));
             return film;
         }, id);
 
@@ -88,7 +90,9 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public List<Film> getAllFilms() {
-        String sql = "SELECT * FROM films";
+        String sql = "SELECT f.*, m.id as mpa_id, m.name as mpa_name " +
+                "FROM films f " +
+                "LEFT JOIN mpa_ratings m ON f.mpa_rating_id = m.id";
         return jdbcTemplate.query(sql, (rs, rowNum) -> {
             Film film = new Film();
             film.setId(rs.getLong("id"));
@@ -96,6 +100,7 @@ public class FilmDbStorage implements FilmStorage {
             film.setDescription(rs.getString("description"));
             film.setReleaseDate(rs.getDate("release_date").toLocalDate());
             film.setDuration(rs.getInt("duration"));
+            film.setMpa(new MpaRating(rs.getInt("mpa_id"), rs.getString("mpa_name")));
             film.setLikedUsers(getLikesByFilmId(film.getId()));
             return film;
         });
@@ -103,13 +108,13 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public List<Film> getPopularFilms(int count) {
-        String sql = "SELECT f.*, COUNT(fl.user_id) AS likes " +
+        String sql = "SELECT f.*, m.id as mpa_id, m.name as mpa_name, COUNT(fl.user_id) AS likes " +
                 "FROM films f " +
                 "LEFT JOIN film_likes fl ON f.id = fl.film_id " +
-                "GROUP BY f.id " +
+                "LEFT JOIN mpa_ratings m ON f.mpa_rating_id = m.id " +
+                "GROUP BY f.id, m.id, m.name " +
                 "ORDER BY likes DESC " +
                 "LIMIT ?";
-
         return jdbcTemplate.query(sql, (rs, rowNum) -> {
             Film film = new Film();
             film.setId(rs.getLong("id"));
@@ -117,10 +122,8 @@ public class FilmDbStorage implements FilmStorage {
             film.setDescription(rs.getString("description"));
             film.setReleaseDate(rs.getDate("release_date").toLocalDate());
             film.setDuration(rs.getInt("duration"));
-            film.setMpa(mpaDao.getMpaById(rs.getInt("mpa_rating_id")));
-            film.setGenres(getGenresByFilmId(film.getId()));
+            film.setMpa(new MpaRating(rs.getInt("mpa_id"), rs.getString("mpa_name")));
             film.setLikedUsers(getLikesByFilmId(film.getId()));
-
             return film;
         }, count);
     }

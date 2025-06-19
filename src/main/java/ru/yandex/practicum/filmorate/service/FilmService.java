@@ -4,18 +4,22 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.dao.GenreDao;
-import ru.yandex.practicum.filmorate.dao.MpaDao;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.MpaRating;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -26,15 +30,17 @@ public class FilmService {
 
     private final UserService userService;
 
-    private final MpaDao mpaDao;
+    private final MpaService mpaService;
 
+    private final GenreService genreService;
     private final GenreDao genreDao;
 
     public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage,
-                       UserService userService, MpaDao mpaDao, GenreDao genreDao) {
+                       UserService userService, MpaService mpaService, GenreService genreService, GenreDao genreDao) {
         this.filmStorage = filmStorage;
         this.userService = userService;
-        this.mpaDao = mpaDao;
+        this.mpaService = mpaService;
+        this.genreService = genreService;
         this.genreDao = genreDao;
     }
 
@@ -42,13 +48,13 @@ public class FilmService {
         if (film.getMpa() == null || film.getMpa().getId() == 0) {
             throw new ValidationException("Необходимо указать рейтинг MPA");
         }
-        film.setMpa(mpaDao.getMpaById(film.getMpa().getId()));
+        film.setMpa(mpaService.getMpaById(film.getMpa().getId()));
         log.info("Добавлено поле мра = {}", film.getMpa());
 
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             Set<Genre> genresFromDb = new LinkedHashSet<>();
             for (Genre genre : film.getGenres()) {
-                var dbGenre = genresFromDb.add(genreDao.getGenreById(genre.getId()));
+                var dbGenre = genresFromDb.add(genreService.getGenreById(genre.getId()));
                 log.debug("Загруженный жанр: {}", dbGenre);
             }
             film.setGenres(new ArrayList<>(genresFromDb));
@@ -62,13 +68,13 @@ public class FilmService {
     }
 
     public Film updateFilm(Film film) {
-        film.setMpa(mpaDao.getMpaById(film.getMpa().getId()));
+        film.setMpa(mpaService.getMpaById(film.getMpa().getId()));
 
         if (film.getGenres() != null) {
             Set<Genre> genresFromDb = new LinkedHashSet<>();
             film.getGenres().stream()
                     .sorted(Comparator.comparingInt(Genre::getId))
-                    .forEach(genre -> genresFromDb.add(genreDao.getGenreById(genre.getId())));
+                    .forEach(genre -> genresFromDb.add(genreService.getGenreById(genre.getId())));
             film.setGenres(new ArrayList<>(genresFromDb));
         }
 
@@ -80,11 +86,22 @@ public class FilmService {
         if (film == null) {
             throw new NotFoundException("Фильм с id=" + id + " не найден");
         }
+        Map<Integer, MpaRating> mpaMap = mpaService.getAllMpa().stream()
+                .collect(Collectors.toMap(MpaRating::getId, Function.identity()));
+
+        film.setMpa(mpaMap.get(film.getMpa().getId()));
+        List<Genre> genres = genreService.getGenresByFilmId(film.getId());
+        film.setGenres(genres);
         return film;
     }
 
     public List<Film> getAllFilms() {
-        return filmStorage.getAllFilms();
+        List<Film> films = filmStorage.getAllFilms();
+        Map<Long, List<Genre>> genresByFilmId = genreService.getAllGenresByFilms();
+        for (Film film : films) {
+            film.setGenres(genresByFilmId.getOrDefault(film.getId(), Collections.emptyList()));
+        }
+        return films;
     }
 
     public void addLike(long filmId, long userId) {
@@ -107,7 +124,12 @@ public class FilmService {
     }
 
     public List<Film> getPopularFilms(int count) {
-        return filmStorage.getPopularFilms(count);
+        List<Film> films = filmStorage.getPopularFilms(count);
+        Map<Long, List<Genre>> genresByFilmId = genreService.getAllGenresByFilms();
+        for (Film film : films) {
+            film.setGenres(genresByFilmId.getOrDefault(film.getId(), Collections.emptyList()));
+        }
+        return films;
     }
 
 }
