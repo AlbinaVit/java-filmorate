@@ -132,4 +132,8 @@ public class FilmService {
         return films;
     }
 
+    public MpaRating getMpaRatingById(int id) {
+        return mpaService.getMpaById(id);
+    }
+
 }

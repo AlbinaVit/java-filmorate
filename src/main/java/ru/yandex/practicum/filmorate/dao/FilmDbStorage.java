@@ -10,7 +10,6 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genre;
 import ru.yandex.practicum.filmorate.model.MpaRating;
-import ru.yandex.practicum.filmorate.service.MpaService;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 
 import java.sql.Connection;
@@ -28,8 +27,6 @@ import java.util.Set;
 public class FilmDbStorage implements FilmStorage {
 
     private final JdbcTemplate jdbcTemplate;
-
-    private final MpaService mpaService;
 
     @Override
     public Film addFilm(Film film) {
@@ -78,7 +75,7 @@ public class FilmDbStorage implements FilmStorage {
             film.setDuration(rs.getInt("duration"));
             film.setLikedUsers(getLikesByFilmId(film.getId()));
             film.setGenres(getGenresByFilmId(film.getId()));
-            film.setMpa(mpaService.getMpaById(rs.getInt("mpa_rating_id")));
+            film.setMpa(new MpaRating(rs.getInt("mpa_rating_id"), null));
             return film;
         }, id);
 
