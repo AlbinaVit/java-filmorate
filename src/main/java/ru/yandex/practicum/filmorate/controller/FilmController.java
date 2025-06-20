@@ -28,9 +28,18 @@ public class FilmController {
 
     @PostMapping
     public Film addFilm(@Valid @RequestBody Film film) {
+        log.info("Получен запрос на добавление фильма: {}", film);
         Film addedFilm = filmService.addFilm(film);
         log.info("Добавлен фильм: {}", addedFilm);
         return addedFilm;
+    }
+
+    @GetMapping("/{id}")
+    public Film getFilm(@PathVariable long id) {
+        log.info("Получен запрос на получение фильма с id: {}", id);
+        Film film = filmService.getFilmById(id);
+        log.info("Найден фильм: {}", film);
+        return film;
     }
 
     @PutMapping
